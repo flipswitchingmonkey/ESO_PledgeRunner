@@ -140,10 +140,10 @@
                     <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="-10" offsetY="0" />
                 </Button>
 
-                <Button name="$(parent)TestButton" text="Test" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
+                <!-- <Button name="$(parent)TestButton" text="Test" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
                     <Dimensions x="150" y="30" />
                     <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)ResetButton" relativePoint="TOPRIGHT" offsetX="0" offsetY="-5" />
-                </Button>
+                </Button> -->
 
             </Controls>
         </TopLevelControl>

@@ -307,8 +307,8 @@ PR.ZONEDATA = {
             final = "Retournez voir Glirion Barbe-Rousse"
         },
     },
-    [681] = {
-        zone = 681,
+    [449] = {
+        zone = 449,
         pledge = 5291,
         en = {
             zone = "Direfrost Keep I",
@@ -644,8 +644,8 @@ PR.ZONEDATA = {
             final = "Kehrt zu Urgarlag Häuptlingsfluch zurück",
         },
         fr = {
-            zone = "",
-            pledge = "",
+            zone = "Les Profondeurs de Malatar",
+            pledge = "Serment : Les Profondeurs de Malatar",
             final = "Retournez voir Urgalarg l'Émasculatrice"
         },
     },
@@ -665,6 +665,25 @@ PR.ZONEDATA = {
         fr = {
             zone = "Procession des Sacrifiés",
             pledge = "Serment : Procession des Sacrifiés",
+            final = "Retournez voir Urgalarg l'Émasculatrice"
+        },
+    },
+    [1080] = {
+        zone = 1080,
+        pledge = 9999999,
+        en = {
+            zone = "Frostvault",
+            pledge = "Pledge: Frostvault",
+            final = "Return to Urgarlag Chief-bane",
+        },
+        de = {
+            zone = "Frostgewölbe",
+            pledge = "Gelöbnis: Frostgewölbe",
+            final = "Kehrt zu Urgarlag Häuptlingsfluch zurück",
+        },
+        fr = {
+            zone = "Arquegivre",
+            pledge = "Serment : Arquegivre",
             final = "Retournez voir Urgalarg l'Émasculatrice"
         },
     },

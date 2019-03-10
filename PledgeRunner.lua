@@ -91,8 +91,9 @@ function PR:Initialize()
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_GUILD_MEMBER_NOTE_CHANGED, self.GuildMemberNoteChanged)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_ADVANCED, self.OnQuestAdvanced)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_PLAYER_COMBAT_STATE, self.OnCombatStateChange)
-    EVENT_MANAGER:RegisterForEvent(self.name, EVENT_ZONE_CHANGED, self.OnZoneChanged)
+    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_ZONE_CHANGED, self.OnZoneChanged)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_PLAYER_ACTIVATED, self.OnPlayerActivated)
+    
     -- EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_EXPERIENCE_GAIN, PledgeRunner.OnExperienceGain)
     -- EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_BOSSES_CHANGED, PledgeRunner.OnBossesChanged)
     -- EVENT_MANAGER:RegisterForEvent(PledgeRunner.name, EVENT_COMBAT_EVENT, PledgeRunner.OnCombatEvent)
@@ -122,7 +123,7 @@ function PR:InitWindow()
         self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
     end)
     -- set button handlers
-    PledgeRunnerDialogTestButton:SetHandler("OnClicked", self.TestButton_Clicked)
+    -- PledgeRunnerDialogTestButton:SetHandler("OnClicked", self.TestButton_Clicked)
     PledgeRunnerDialogResetButton:SetHandler("OnClicked", self.ResetButton_Clicked)
     PledgeRunnerDialogResetButton:SetText(GetString(PLEDGERUNNER_BUTTON_CLEAR))
     PledgeRunnerDialogButtonCloseAddon:SetHandler("OnClicked", self.ToggleMainWindow)
@@ -146,8 +147,6 @@ function PR:InitWindow()
     ZO_CheckButton_SetToggleFunction(PledgeRunnerDialogEnableGuildCheck, self.EnableGuildCheck_OnToggle)
   
     self:RestorePosition()
-    -- PR.InitialJournalScan()
-    -- PR.InitialGuildNoteRead()
 end
 
 -- Function that creates the scrollList 
@@ -431,21 +430,12 @@ end
 -- ESO_event functions
 function PR.OnCombatStateChange(event, inCombat)
     if inCombat == true then
-        -- d(zo_strformat("Combat Started: <<1>>",GetTimeString()))
         -- if we are in a pledge zone and the timer has not yet started...
         if PR.currentZoneData ~= nil and PR.timerStart == nil then
             PR.StartTimer()
-            -- d("Timer started: " .. PR.timerStart)
             PR.CenterAnnounce("The fight begins in <<1>>", PR.currentZoneData[PR.locale]["zone"])
             PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_STARTED, GetTimeStamp()))
         end
-    else
-        -- local timerStop = GetTimeStamp()
-        -- d(zo_strformat("Combat Started: <<1>>",GetTimeString()))
-        -- local diff = GetDiffBetweenTimeStamps(timerStop, PR.timerStart)
-        -- local h,m,s = PR.GetTimeFromTimeStamp(diff)
-        -- d(zo_strformat("Combat Time: <<1>>:<<2>>:<<3>>",string.format("%02d",h),string.format("%02d",m),string.format("%02d",s)))
-        -- PR:SetLastEvent(PR.EVENTS.COMBAT_STATE_LEFT)
     end
 end
 
@@ -453,16 +443,14 @@ end
 function PR.OnPlayerActivated(event)
     local zoneName = GetUnitZone('player')
     local zoneId, worldX, worldY, worldZ = GetUnitWorldPosition('player')
-    -- d(zo_strformat("<<1>> entered, zoneId: <<2>>", zoneName, zoneId))
+    -- check if the new zone is actually the same as the previous zone, in which case do nothing
+    -- this happens in some dungeons that are split into multiple sub zones (Darkshade for example)
+    if PR.currentZoneData ~= nil and zoneId == PR.currentZoneData.zone then
+        return
+    end
     -- CHECK OLD ZONE DATA
     -- before checking for the _new_ zone data, see if we left a zone that had zone data, so we can log that
     if PR.currentZoneData ~= nil then
-        -- local s = ""
-        -- if PR.timerStart ~= nil then
-            -- local diff = GetDiffBetweenTimeStamps(GetTimeStamp(), PR.timerStart)
-            -- local h,m,s = PR.GetTimeFromTimeStamp(diff)
-            -- d(zo_strformat("Combat Time: <<1>>:<<2>>:<<3>>",string.format("%02d",h),string.format("%02d",m),string.format("%02d",s)))
-        -- end
         PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_LEFT, PR.GetTimeElapsed()))
     end
     -- RENEW ZONE DATA
@@ -473,7 +461,6 @@ function PR.OnPlayerActivated(event)
         PR.CenterAnnounce(zo_strformat("<<1>> entered", zoneName))
         PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(zoneId, PR.ACTION.PLEDGE_ZONE_ENTERED, 0))
         PledgeRunnerDialogCurrentZone:SetText(zoneName)
-        -- d(PR.currentZoneData)
     else
         PledgeRunnerDialogCurrentZone:SetText("|c777777" .. zoneName .. "|r")
     end
@@ -483,7 +470,7 @@ function PR.OnZoneChanged(event, _, subZoneName, _, _, subZoneId)
     -- using Event Parameters would be way too easy! (since they don't work...)
     local zoneName = GetUnitZone('player')
     local zoneId, worldX, worldY, worldZ = GetUnitWorldPosition('player')
-    d(zo_strformat("<<1>> entered, zoneId: <<2>>, subZoneName: <<3>>, subZoneId: <<4>>", zoneName, zoneId, subZoneName, subZoneId))
+    -- d(zo_strformat("<<1>> entered, zoneId: <<2>>, subZoneName: <<3>>, subZoneId: <<4>>", zoneName, zoneId, subZoneName, subZoneId))
 end
 
 function PR.OnQuestAdvanced(event, journalIndex, questName, isPushed, isComplete, mainStepChanged)
@@ -492,11 +479,11 @@ function PR.OnQuestAdvanced(event, journalIndex, questName, isPushed, isComplete
     -- d(zo_strformat("<<1>>,<<2>>,isPushed <<3>>,isComplete <<4>>,mainStepChanged <<5>>", journalIndex, questName, isPushed, isComplete, mainStepChanged))
     -- d(questNameJournal, backgroundText, activeStepText, activeStepType, activeStepTrackerOverrideText, completed, tracked, questLevel, pushed, questType, instanceDisplayType)
     -- d(zo_strformat("<<1>>,<<2>>", questName, activeStepTrackerOverrideText))
-    d(conditionText)
+    -- d(conditionText)
     if PR.currentZoneData ~= nil then
         d(PR.currentZoneData[PR.locale]["pledge"])
         if questName == PR.currentZoneData[PR.locale]["pledge"] and conditionText == PR.currentZoneData[PR.locale]["final"] then
-            d("FINAL STEP REACHED")
+            -- d("FINAL STEP REACHED")
             PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED, PR.GetTimeElapsed()))
         end
     end
@@ -521,15 +508,9 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
     local guildMemberId = GetGuildMemberIndexFromDisplayName(guildId, displayName)
     local addonData, noteWithoutData = PR.ExtractAddonDataFromGuildNote(note)
     if addonData ~= nil then
-      -- d("PledgeRunner Data from Note:" .. addonData)
-      -- if PledgeRunner.savedVariables["guildEnabledChatNotify"][PledgeRunner.savedVariables.selectedGuildId] == true then
-      --   local s = zo_strformat("Guild: <<1>> Member: <<2>> Data: <<3>>", GetGuildName(guildId), displayName, addonData)
-      --   CHAT_SYSTEM:AddMessage(s)
-      -- end
       for k, val in pairs(addonData) do
         PR.AddRow(val, displayName)
       end
-    -- PledgeRunner.AddRow(addonData, displayName)
     end
   end
   
@@ -543,7 +524,7 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
             doInsert = false
         elseif v.name == data.name and v.zone == data.zone then
             if v.action == PR.ACTION.PLEDGE_FINAL_REACHED then
-                doInsert = false 
+                doInsert = true 
             elseif v.action == PR.ACTION.PLEDGE_ZONE_ENTERED or v.action == PR.ACTION.PLEDGE_ZONE_STARTED then
                 v.time = data.time
                 v.message = data.message
@@ -662,16 +643,12 @@ function PR.InjectAddonDataIntoGuildNote(dataString)
     end
 end
 
-function PR.TestButton_Clicked()
-    PR.StartTimer()
-    -- PR.timerStart = GetTimeStamp() - 1000
-    PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1052, PR.ACTION.PLEDGE_FINAL_REACHED, GetTimeStamp()))
-    PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1055, PR.ACTION.PLEDGE_ZONE_ENTERED, GetTimeStamp()))
-    -- PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1055, PR.ACTION.PLEDGE_ZONE_STARTED, GetTimeStamp()))
-    -- PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1055, PR.ACTION.PLEDGE_FINAL_REACHED, GetTimeStamp()))
-    -- PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1055, PR.ACTION.PLEDGE_ZONE_LEFT, GetTimeStamp()))
-    PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(380, PR.ACTION.PLEDGE_ZONE_ENTERED, GetTimeStamp()))
-end
+-- function PR.TestButton_Clicked()
+--     PR.StartTimer()
+--     PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1052, PR.ACTION.PLEDGE_FINAL_REACHED, GetTimeStamp()))
+--     PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(1055, PR.ACTION.PLEDGE_ZONE_ENTERED, GetTimeStamp()))
+--     PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(380, PR.ACTION.PLEDGE_ZONE_ENTERED, GetTimeStamp()))
+-- end
 
 function PR.ResetButton_Clicked()
     PR.ClearDataItems(PR.savedVariables.selectedGuildId)
