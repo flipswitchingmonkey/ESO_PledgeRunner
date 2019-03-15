@@ -4,6 +4,7 @@ PledgeRunner = PledgeRunner or {}
 local PR = PledgeRunner
 
 -- set up some global vars
+PR.debug = nil
 PR.name = "PledgeRunner"
 PR.dataBoundaryPattern = "::PR::"
 PR.writeGuildNoteSemaphore = false
@@ -14,44 +15,35 @@ PR.defaults = {
     selectedGuildId = 1,
     left = 100,
     top = 100,
-    width = 500,
+    width = 700,
     height = 500,
+    hidden = false,
     guildEnabled = {false,false,false,false,false},
 }
 PR.scrollList = nil
 PR.dataItems = { [1] = {}, [2] = {}, [3] = {}, [4] = {}, [5] = {} }
 PR.columnWidthUnit = 22
-PR.columnUnits = { 0, 2.8, 2.8, 3.7, 0}
+PR.columnUnits = { 0, 2.6, 2.6, 3.7, 0}
 PR.currentZoneData = nil
+PR.currentZoneBossKills = 0
 PR.timerStart = nil
 PR.filterQuestCategory = 1
+PR.killed_boss_list = {}
+PR.active_boss_list = {}
 
 -- set up enums
-PR.EVENTS = {
-    UNDEFINED = 99999999,
-    COMBAT_STATE_ENTERED = 1,
-    COMBAT_STATE_LEFT = 2,
-    PLEDGE_ZONE_ENTERED = 3,
-}
-
 PR.ACTION = {
     UNDEFINED = 99999999,
     PLEDGE_ZONE_ENTERED = 1,
     PLEDGE_ZONE_STARTED = 2,
     PLEDGE_FINAL_REACHED = 3,
     PLEDGE_ZONE_LEFT = 4,
+    PLEDGE_ZONE_ENTERED_VET = 5,
+    PLEDGE_ZONE_STARTED_VET = 6,
+    PLEDGE_FINAL_REACHED_VET = 7,
+    PLEDGE_ZONE_LEFT_VET = 8,
+    BOSS_KILLED = 9,
 }
-
-PR._last_event = PR.EVENTS.UNDEFINED
-function PR:GetLastEvent()
-    if self._last_event == nil then return PR.EVENTS.UNDEFINED
-    else return self._last_event
-    end
-end
-function PR:SetLastEvent(new_event)
-    if new_event == nil then new_event = PR.EVENT.UNDEFINED end
-    self._last_event = new_event
-end
 
 function PR.ClearDataItems(guildId)
     if guildId == nil then
@@ -72,35 +64,93 @@ EVENT_MANAGER:RegisterForEvent(PR.name,EVENT_ADD_ON_LOADED,PR.OnAddOnLoaded)
 
 -- init function
 function PR:Initialize()
-    self.hidden = false
     self.locale = GetCVar('Language.2')
     if self.locale ~= 'en' and self.locale ~= 'de' then
         self.locale = 'en'
     end
     
     self.savedVariables = ZO_SavedVars:NewAccountWide("PledgeRunnerSavedVariables", 1, nil, self.defaults)
+    PledgeRunnerDialog:SetHidden(PR.savedVariables.hidden)
+
     -- Create the scrollList
     PR:CreateScrollList()
 
     if GetDisplayName() == "@flipswitchingmonkey" then
       SLASH_COMMANDS["/rr"] = function(cmd) ReloadUI() end
+      PR.debug = true
     end 
     SLASH_COMMANDS["/pledgerunner"] = function(cmd) PR.ShowUI() end
 
     -- REGISTER EVENTS
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_GUILD_MEMBER_NOTE_CHANGED, self.GuildMemberNoteChanged)
-    EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_ADVANCED, self.OnQuestAdvanced)
-    EVENT_MANAGER:RegisterForEvent(self.name, EVENT_PLAYER_COMBAT_STATE, self.OnCombatStateChange)
-    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_ZONE_CHANGED, self.OnZoneChanged)
     EVENT_MANAGER:RegisterForEvent(self.name, EVENT_PLAYER_ACTIVATED, self.OnPlayerActivated)
-    
-    -- EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_EXPERIENCE_GAIN, PledgeRunner.OnExperienceGain)
-    -- EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_BOSSES_CHANGED, PledgeRunner.OnBossesChanged)
-    -- EVENT_MANAGER:RegisterForEvent(PledgeRunner.name, EVENT_COMBAT_EVENT, PledgeRunner.OnCombatEvent)
-    
+    -- moved to the Start/StopTimer functions to limit the amount of unnecessary event handling
+    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_COMBAT_EVENT, self.OnCombatEvent)
+    -- EVENT_MANAGER:AddFilterForEvent(self.name, EVENT_COMBAT_EVENT, REGISTER_FILTER_COMBAT_RESULT, ACTION_RESULT_DIED)
+    -- EVENT_MANAGER:AddFilterForEvent(self.name, EVENT_COMBAT_EVENT, REGISTER_FILTER_COMBAT_RESULT, ACTION_RESULT_DIED_XP)
+    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_EXPERIENCE_GAIN, self.OnExperienceGain)
+    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_QUEST_ADVANCED, self.OnQuestAdvanced)
+    -- EVENT_MANAGER:RegisterForEvent(self.name, EVENT_PLAYER_COMBAT_STATE, self.OnCombatStateChange)
+
     -- INIT MAINWINDOWS CONTROLS
     PR:InitWindow()
 end
+
+function PR.OnUnitDeatStateChanged(event, unitTag, isDead)
+    if PR.starts_with(unitTag, "boss") and isDead==true then 
+        bossName = GetUnitName(unitTag)
+        PR.AddBossKill(bossName)
+        if PR.debug==true then d("DEAD:"..bossName) end
+    end
+end
+
+function PR.OnExperienceGain(event, reason, level, previousExperience, currentExperience, championPoints)
+    if PR.debug==true then d("XP " .. reason .. " " .. currentExperience) end
+    -- if reason==PROGRESS_REASON_ACHIEVEMENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ACHIEVEMENT") end end
+    -- if reason==PROGRESS_REASON_ACTION then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ACTION") end end
+    -- if reason==PROGRESS_REASON_ALLIANCE_POINTS then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ALLIANCE_POINTS") end end
+    -- if reason==PROGRESS_REASON_AVA then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_AVA") end end
+    -- if reason==PROGRESS_REASON_BATTLEGROUND then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BATTLEGROUND") end end
+    -- if reason==PROGRESS_REASON_BOOK_COLLECTION_COMPLETE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BOOK_COLLECTION_COMPLETE") end end
+    if reason==PROGRESS_REASON_BOSS_KILL then
+        if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BOSS_KILL") end
+        -- local numBossesKilled = PR.CheckBossesAlive()
+        -- if numBossesKilled > 0 then PR.AddBossKill() end
+    end
+    -- if reason==PROGRESS_REASON_COLLECT_BOOK then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COLLECT_BOOK") end end
+    -- if reason==PROGRESS_REASON_COMMAND then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COMMAND") end end
+    -- if reason==PROGRESS_REASON_COMPLETE_POI then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COMPLETE_POI") end end
+    -- if reason==PROGRESS_REASON_DARK_ANCHOR_CLOSED then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DARK_ANCHOR_CLOSED") end end
+    -- if reason==PROGRESS_REASON_DARK_FISSURE_CLOSED then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DARK_FISSURE_CLOSED") end end
+    -- if reason==PROGRESS_REASON_DISCOVER_POI then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DISCOVER_POI") end end
+    if reason==PROGRESS_REASON_DUNGEON_CHALLENGE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DUNGEON_CHALLENGE") end end
+    -- if reason==PROGRESS_REASON_EVENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_EVENT") end end
+    -- if reason==PROGRESS_REASON_FINESSE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_FINESSE") end end
+    -- if reason==PROGRESS_REASON_GRANT_REPUTATION then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_GRANT_REPUTATION") end end
+    -- if reason==PROGRESS_REASON_GUILD_REP then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_GUILD_REP") end end
+    -- if reason==PROGRESS_REASON_JUSTICE_SKILL_EVENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_JUSTICE_SKILL_EVENT") end end
+    -- if reason==PROGRESS_REASON_KEEP_REWARD then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_KEEP_REWARD") end end
+    -- if reason==PROGRESS_REASON_KILL then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_KILL") end end
+    -- if reason==PROGRESS_REASON_LFG_REWARD then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_LFG_REWARD") end end
+    -- if reason==PROGRESS_REASON_LOCK_PICK then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_LOCK_PICK") end end
+    -- if reason==PROGRESS_REASON_MEDAL then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_MEDAL") end end
+    -- if reason==PROGRESS_REASON_NONE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_NONE") end end
+    -- if reason==PROGRESS_REASON_OTHER then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_OTHER") end end
+    -- if reason==PROGRESS_REASON_OVERLAND_BOSS_KILL then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_OVERLAND_BOSS_KILL") end end
+    -- if reason==PROGRESS_REASON_PVP_EMPEROR then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_PVP_EMPEROR") end end
+    -- if reason==PROGRESS_REASON_QUEST then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_QUEST") end end
+    -- if reason==PROGRESS_REASON_REWARD then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_REWARD") end end
+    -- if reason==PROGRESS_REASON_SCRIPTED_EVENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_SCRIPTED_EVENT") end end
+    -- if reason==PROGRESS_REASON_SKILL_BOOK then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_SKILL_BOOK") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_ACHIEVEMENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_ACHIEVEMENT") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_CONSUME then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_CONSUME") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_HARVEST then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_HARVEST") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_QUEST then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_QUEST") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_RECIPE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_RECIPE") end end
+    -- if reason==PROGRESS_REASON_TRADESKILL_TRAIT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_TRAIT") end end
+  end
+
 
 function PR:InitWindow()
     PledgeRunnerDialog:SetHandler("OnMoveStop", function(control)
@@ -119,20 +169,40 @@ function PR:InitWindow()
         PledgeRunnerDialogHeadersName:SetDimensions(self.columnWidthUnit * self.columnUnits[2], 25)
         PledgeRunnerDialogHeadersZone:SetDimensions(self.columnWidthUnit * self.columnUnits[3], 25)
         PledgeRunnerDialogHeadersMessage:SetDimensions(self.columnWidthUnit * self.columnUnits[4], 25)
-        PledgeRunnerDialogHeadersDeleteRow:SetDimensions(25, 25)
+        PledgeRunnerDialogHeadersDeleteRow:SetDimensions(20, 20)
         self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
     end)
     -- set button handlers
     -- PledgeRunnerDialogTestButton:SetHandler("OnClicked", self.TestButton_Clicked)
-    PledgeRunnerDialogResetButton:SetHandler("OnClicked", self.ResetButton_Clicked)
-    PledgeRunnerDialogResetButton:SetText(GetString(PLEDGERUNNER_BUTTON_CLEAR))
+    -- PledgeRunnerDialogResetButton:SetHandler("OnClicked", self.ResetButton_Clicked)
+    -- PledgeRunnerDialogResetButton:SetText(GetString(PLEDGERUNNER_BUTTON_CLEAR))
     PledgeRunnerDialogButtonCloseAddon:SetHandler("OnClicked", self.ToggleMainWindow)
+    PledgeRunnerDialogTimerLabel:SetText(GetString(PLEDGERUNNER_TIMER)..":")
+    PledgeRunnerDialogBossCompletionLabel:SetText(GetString(PLEDGERUNNER_BOSSES)..":")
+    
+    PledgeRunnerDialogBossCompletionLabel:SetMouseEnabled(true)
+    PledgeRunnerDialogBossCompletionLabel:SetHandler('OnMouseEnter', function(thisControl)
+        ZO_Tooltips_ShowTextTooltip(thisControl, BOTTOM, PR.KilledBossListAsString())
+    end)
+    PledgeRunnerDialogBossCompletionLabel:SetHandler('OnMouseExit', function(thisControl)
+        ZO_Tooltips_HideTextTooltip()
+    end)
   
+    PledgeRunnerDialogCurrentZone:SetMouseEnabled(true)
+    PledgeRunnerDialogCurrentZone:SetHandler('OnMouseEnter', function(thisControl)
+        if thisControl:WasTruncated() then
+            ZO_Tooltips_ShowTextTooltip(thisControl, TOP, thisControl:GetText())
+        end
+    end)
+    PledgeRunnerDialogCurrentZone:SetHandler('OnMouseExit', function(thisControl)
+        ZO_Tooltips_HideTextTooltip()
+    end)
+
     self.OnGuildSelectedCallback = function(_, _, entry)
-        self:OnGuildSelected(entry)
+        self:OnGuildSelected()
     end
     self.OnFilterQuestSelectedCallback = function(_, _, entry)
-        self:OnFilterQuestSelected(entry)
+        self:OnFilterQuestSelected()
     end
   
     self.questFilterComboBox = PR:GetFilterQuestComboBox()
@@ -196,6 +266,36 @@ function PR.SetupDataRow(rowControl, data, scrollList)
     rowControl.zone:SetText(data.zone)
     rowControl.message:SetText(data.message)
 
+    rowControl.name:SetMouseEnabled(true)
+    rowControl.name:SetHandler('OnMouseEnter', function(thisControl)
+        if thisControl:WasTruncated() then
+            ZO_Tooltips_ShowTextTooltip(thisControl, TOP, thisControl:GetText())
+        end
+    end)
+    rowControl.name:SetHandler('OnMouseExit', function(thisControl)
+        ZO_Tooltips_HideTextTooltip()
+    end)
+
+    rowControl.zone:SetMouseEnabled(true)
+    rowControl.zone:SetHandler('OnMouseEnter', function(thisControl)
+        if thisControl:WasTruncated() then
+            ZO_Tooltips_ShowTextTooltip(thisControl, TOP, thisControl:GetText())
+        end
+    end)
+    rowControl.zone:SetHandler('OnMouseExit', function(thisControl)
+        ZO_Tooltips_HideTextTooltip()
+    end)
+
+    rowControl.message:SetMouseEnabled(true)
+    rowControl.message:SetHandler('OnMouseEnter', function(thisControl)
+        if thisControl:WasTruncated() then
+            ZO_Tooltips_ShowTextTooltip(thisControl, TOP, thisControl:GetText())
+        end
+    end)
+    rowControl.message:SetHandler('OnMouseExit', function(thisControl)
+        ZO_Tooltips_HideTextTooltip()
+    end)
+
     rowControl.name.normalColor = PR.DEFAULT_TEXT
     rowControl.time.normalColor = PR.DEFAULT_TEXT
     rowControl.zone.normalColor = PR.DEFAULT_TEXT
@@ -205,9 +305,19 @@ function PR.SetupDataRow(rowControl, data, scrollList)
     rowControl.name:SetDimensions(PR.columnWidthUnit * PR.columnUnits[2], 32)
     rowControl.zone:SetDimensions(PR.columnWidthUnit * PR.columnUnits[3], 32)
     rowControl.message:SetDimensions(PR.columnWidthUnit * PR.columnUnits[4], 32)
-    rowControl.deleteRow:SetDimensions(25, 25)
+    rowControl.deleteRow:SetDimensions(20, 20)
 
     rowControl:SetFont("ZoFontWinH4")
+end
+
+function PR.KilledBossListAsString()
+    local s = GetString(PLEDGERUNNER_BOSSES_KILLED) .. "\n"
+    for key, boss in ipairs(PR.killed_boss_list) do
+        if boss ~= nil and #boss > 0 then
+            s = s .. "- " .. boss .. "\n"
+        end
+    end
+    return s
 end
 
 function PR:GetGuildComboBox()
@@ -233,7 +343,7 @@ function PR:RestorePosition()
     PledgeRunnerDialogHeadersName:SetDimensions(PR.columnWidthUnit * PR.columnUnits[2], 25)
     PledgeRunnerDialogHeadersZone:SetDimensions(PR.columnWidthUnit * PR.columnUnits[3], 25)
     PledgeRunnerDialogHeadersMessage:SetDimensions(PR.columnWidthUnit * PR.columnUnits[4], 25)
-    PledgeRunnerDialogHeadersDeleteRow:SetDimensions(25, 25)
+    PledgeRunnerDialogHeadersDeleteRow:SetDimensions(20, 20)
     if (width ~= nil and height ~= nil) and (width > 100 and height > 100) then
         PledgeRunnerDialog:SetDimensions(width, height)
     else 
@@ -350,27 +460,27 @@ function PR.EnableGuildCheck_OnToggle(checkButton, isChecked)
 end
   
 function PR.ToggleMainWindow()
-    PR.hidden = not PR.hidden
-    PledgeRunnerDialog:SetHidden(PR.hidden)
+    PR.savedVariables.hidden = not PR.savedVariables.hidden
+    PledgeRunnerDialog:SetHidden(PR.savedVariables.hidden)
 end
   
 function PR.CloseUI()
-    PR.hidden = true;
+    PR.savedVariables.hidden = true;
     SCENE_MANAGER:HideTopLevel(PledgeRunnerDialog)
 end
   
 function PR.ShowUI()
-    PR.hidden = false;
-    PledgeRunnerDialog:SetHidden(PR.hidden)
+    PR.savedVariables.hidden = false;
+    PledgeRunnerDialog:SetHidden(PR.savedVariables.hidden)
 end
   
 function PR.HideUI()
-    PR.hidden = true;
-    PledgeRunnerDialog:SetHidden(PR.hidden)
+    PR.savedVariables.hidden = true;
+    PledgeRunnerDialog:SetHidden(PR.savedVariables.hidden)
 end
   
 function PR:OnGuildSelected(entry)
-    -- d(entry.guildId, entry.guildText)
+    -- if PR.debug==true then d(entry.guildId, entry.guildText)
     ZO_CheckButton_SetCheckState(PledgeRunnerDialogEnableGuildCheck, self.savedVariables["guildEnabled"][entry.guildId])
     self.savedVariables.selectedGuildId = entry.guildId
     self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
@@ -419,7 +529,7 @@ end
 
 function PR.StopTimer()
     PR.timerStart = nil
-    PledgeRunnerDialogTimerTime:SetText("|c77777700:00:00|r")
+    -- PledgeRunnerDialogTimerTime:SetText("|c77777700:00:00|r")
 end
 
 function PR.GetTimeElapsed()
@@ -434,15 +544,24 @@ function PR.OnCombatStateChange(event, inCombat)
         if PR.currentZoneData ~= nil and PR.timerStart == nil then
             PR.StartTimer()
             PR.CenterAnnounce("The fight begins in <<1>>", PR.currentZoneData[PR.locale]["zone"])
-            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_STARTED, GetTimeStamp()))
+            if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+                PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_STARTED_VET, PR.GetTimeElapsed()))
+            else
+                PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_STARTED, PR.GetTimeElapsed()))
+            end
+
         end
     end
 end
+
+-- GetCurrentZoneDungeonDifficulty()
 
 -- EVENT_ZONE_CHANGED is not triggered at initial entry, but EVENT_PLAYER_ACTIVATED is
 function PR.OnPlayerActivated(event)
     local zoneName = GetUnitZone('player')
     local zoneId, worldX, worldY, worldZ = GetUnitWorldPosition('player')
+    local bossMaxZone
+
     -- check if the new zone is actually the same as the previous zone, in which case do nothing
     -- this happens in some dungeons that are split into multiple sub zones (Darkshade for example)
     if PR.currentZoneData ~= nil and zoneId == PR.currentZoneData.zone then
@@ -458,11 +577,46 @@ function PR.OnPlayerActivated(event)
     PR.currentZoneData = PR.ZONEDATA[zoneId]
     PR.StopTimer()
     if PR.currentZoneData ~= nil then
+        EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_QUEST_ADVANCED, PR.OnQuestAdvanced)
+        EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_PLAYER_COMBAT_STATE, PR.OnCombatStateChange)
+        EVENT_MANAGER:RegisterForEvent(PR.name, EVENT_UNIT_DEATH_STATE_CHANGED, PR.OnUnitDeatStateChanged)
         PR.CenterAnnounce(zo_strformat("<<1>> entered", zoneName))
-        PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(zoneId, PR.ACTION.PLEDGE_ZONE_ENTERED, 0))
+        -- PR.currentZoneBossKills = 0
+        PR.killed_boss_list = {}
+        bossMaxZone = PR.currentZoneData["numBosses"] or 6
+        if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(zoneId, PR.ACTION.PLEDGE_ZONE_ENTERED_VET, 0))
+        else
+            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(zoneId, PR.ACTION.PLEDGE_ZONE_ENTERED, 0))
+        end
         PledgeRunnerDialogCurrentZone:SetText(zoneName)
+        PledgeRunnerDialogBossCompletion:SetText(zo_strformat("<<1>>/<<2>>", 0, bossMaxZone))
     else
+        EVENT_MANAGER:UnregisterForEvent(PR.name, EVENT_QUEST_ADVANCED)
+        EVENT_MANAGER:UnregisterForEvent(PR.name, EVENT_PLAYER_COMBAT_STATE)
+        EVENT_MANAGER:UnregisterForEvent(PR.name, EVENT_UNIT_DEATH_STATE_CHANGED, PR.OnUnitDeatStateChanged)
+        bossMaxZone = GetNumZoneActivitiesForZoneCompletionType(zoneId, ZONE_COMPLETION_TYPE_GROUP_BOSSES)
+        local bossDoneZone = GetNumCompletedZoneActivitiesForZoneCompletionType(zoneId, ZONE_COMPLETION_TYPE_GROUP_BOSSES)
         PledgeRunnerDialogCurrentZone:SetText("|c777777" .. zoneName .. "|r")
+        PledgeRunnerDialogBossCompletion:SetText(zo_strformat("|c777777<<1>>/<<2>>|r", bossDoneZone, bossMaxZone))
+    end
+end
+
+function PR.AddBossKill(bossName)
+    if PR.currentZoneData ~= nil and bossName ~= nil then
+        -- PR.currentZoneBossKills = PR.currentZoneBossKills + 1
+        local bossMaxZone = PR.currentZoneData["numBosses"] or 6
+        table.insert(PR.killed_boss_list, bossName)
+        PledgeRunnerDialogBossCompletion:SetText(zo_strformat("<<1>>/<<2>>", #PR.killed_boss_list, bossMaxZone))
+        PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.BOSS_KILLED, #PR.killed_boss_list))
+        if #PR.killed_boss_list == bossMaxZone then
+            if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+                PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED_VET, PR.GetTimeElapsed()))
+            else
+                PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED, PR.GetTimeElapsed()))
+            end
+            PR.StopTimer()
+        end
     end
 end
 
@@ -470,25 +624,37 @@ function PR.OnZoneChanged(event, _, subZoneName, _, _, subZoneId)
     -- using Event Parameters would be way too easy! (since they don't work...)
     local zoneName = GetUnitZone('player')
     local zoneId, worldX, worldY, worldZ = GetUnitWorldPosition('player')
-    -- d(zo_strformat("<<1>> entered, zoneId: <<2>>, subZoneName: <<3>>, subZoneId: <<4>>", zoneName, zoneId, subZoneName, subZoneId))
+    -- if PR.debug==true then d(zo_strformat("<<1>> entered, zoneId: <<2>>, subZoneName: <<3>>, subZoneId: <<4>>", zoneName, zoneId, subZoneName, subZoneId))
 end
 
 function PR.OnQuestAdvanced(event, journalIndex, questName, isPushed, isComplete, mainStepChanged)
     local questNameJournal, backgroundText, activeStepText, activeStepType, activeStepTrackerOverrideText, completed, tracked, questLevel, pushed, questType, instanceDisplayType = GetJournalQuestInfo(journalIndex)
     local conditionText, _, _, isFailCondition, isComplete, _, _, conditionType = GetJournalQuestConditionInfo(journalIndex)
-    -- d(zo_strformat("<<1>>,<<2>>,isPushed <<3>>,isComplete <<4>>,mainStepChanged <<5>>", journalIndex, questName, isPushed, isComplete, mainStepChanged))
-    -- d(questNameJournal, backgroundText, activeStepText, activeStepType, activeStepTrackerOverrideText, completed, tracked, questLevel, pushed, questType, instanceDisplayType)
-    -- d(zo_strformat("<<1>>,<<2>>", questName, activeStepTrackerOverrideText))
-    -- d(conditionText)
+    -- if PR.debug==true then d(zo_strformat("<<1>>,<<2>>,isPushed <<3>>,isComplete <<4>>,mainStepChanged <<5>>", journalIndex, questName, isPushed, isComplete, mainStepChanged))
+    -- if PR.debug==true then d(questNameJournal, backgroundText, activeStepText, activeStepType, activeStepTrackerOverrideText, completed, tracked, questLevel, pushed, questType, instanceDisplayType)
+    -- if PR.debug==true then d(zo_strformat("<<1>>,<<2>>", questName, activeStepTrackerOverrideText))
+    -- if PR.debug==true then d(conditionText)
     if PR.currentZoneData ~= nil then
-        d(PR.currentZoneData[PR.locale]["pledge"])
+        if PR.debug==true then d(PR.currentZoneData[PR.locale]["pledge"]) end
         if questName == PR.currentZoneData[PR.locale]["pledge"] and conditionText == PR.currentZoneData[PR.locale]["final"] then
-            -- d("FINAL STEP REACHED")
-            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED, PR.GetTimeElapsed()))
+            if PR.debug==true then d("FINAL STEP REACHED") end
+                if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+                    PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED_VET, PR.GetTimeElapsed()))
+                else
+                    PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED, PR.GetTimeElapsed()))
+                end
+            PR.StopTimer()
         end
     end
   end
 
+  function PR.OnCombatEvent(event, result, isError, abilityName, abilityGraphic, abilityActionSlotType, sourceName, sourceType, targetName, targetType, hitValue, powerType, damageType, log, sourceUnitId, targetUnitId, abilityId)
+    local rawSourceName = ZO_CachedStrFormat(SI_UNIT_NAME, sourceName)
+    local rawTargetName = ZO_CachedStrFormat(SI_UNIT_NAME, targetName)
+    
+    if PR.debug==true then d(zo_strformat("Source: <<1>> ID: <<2>> Type: <<3>> // Target: <<4>> ID: <<5>> Type: <<6>>", rawSourceName, sourceUnitId, sourceType, rawTargetName, targUnitId, targetType)) end
+    if PR.debug==true then d(zo_strformat("numBossesKilled: <<1>>", numBossesKilled)) end
+  end
 
 function PR.CenterAnnounce(text, category, sound, duration)
   if text == nil then return end
@@ -525,7 +691,7 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
         elseif v.name == data.name and v.zone == data.zone then
             if v.action == PR.ACTION.PLEDGE_FINAL_REACHED then
                 doInsert = true 
-            elseif v.action == PR.ACTION.PLEDGE_ZONE_ENTERED or v.action == PR.ACTION.PLEDGE_ZONE_STARTED then
+            elseif v.action == PR.ACTION.PLEDGE_ZONE_ENTERED or v.action == PR.ACTION.PLEDGE_ZONE_STARTED or v.action == PR.ACTION.BOSS_KILLED then
                 v.time = data.time
                 v.message = data.message
                 v.action = data.action
@@ -545,7 +711,7 @@ end
 function PR.EncodeDataStringWithName(zoneName, action, parameter)
     local zoneData = PR.GetZoneDataByName(zoneName)
     if zoneData == nil then
-      d("No Zone Data found")
+      if PR.debug==true then d("No Zone Data found") end
       return nil
     end
     return zo_strformat("<<1>>##<<2>>##<<3>>", zoneData["zone"], action, parameter)
@@ -554,28 +720,42 @@ end
 function PR.EncodeDataStringWithId(zoneId, action, parameter)
     return zo_strformat("<<1>>##<<2>>##<<3>>", zoneId, action, parameter)
 end
-  
+
+-- This function decodes the data string on the RECEIVING side (namely from the guild note changed event)
+-- thus it can only rely on the zonedata, action and optional parameter and the local ZONEDATA
 function PR.DecodeDataString(dataString, playerName)
     if dataString == nil then return end
     local data = PR.strSplit("##", dataString)
     if data == nil or #data < 3 then return end
-    -- d("AddRow", dataString)
+    -- if PR.debug==true then d("AddRow", dataString) end
     local zoneId = tonumber(data[1])
     local action = tonumber(data[2])
     local parameter = tonumber(data[3])
-    if zoneId == nil then return end
+    if zoneId == nil or PR.ZONEDATA[zoneId] == nil then return end
     if action == nil then return end
     local zoneName = PR.ZONEDATA[zoneId][PR.locale]["zone"]
     if zoneName == nil then zoneName = data[1] end
     local msg = ""
-    if     action==PR.ACTION.PLEDGE_ZONE_ENTERED then 
+    if action==PR.ACTION.PLEDGE_ZONE_ENTERED then 
         msg = GetString(PLEDGERUNNER_PLEDGE_ZONE_ENTERED)
+    elseif action==PR.ACTION.PLEDGE_ZONE_ENTERED_VET then
+        zoneName = zoneName .. " (Veteran)"
+        msg = GetString(PLEDGERUNNER_PLEDGE_ZONE_ENTERED_VET)
     elseif action==PR.ACTION.PLEDGE_ZONE_STARTED then 
         msg = zo_strformat("|c96C05F<<1>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_STARTED))
+    elseif action==PR.ACTION.PLEDGE_ZONE_STARTED_VET then
+        zoneName = zoneName .. " (Veteran)"
+        msg = zo_strformat("|c96C05F<<1>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_STARTED_VET))
     elseif action==PR.ACTION.PLEDGE_FINAL_REACHED then 
         msg = zo_strformat("|cD2B568<<1>> <<2>>|r", GetString(PLEDGERUNNER_PLEDGE_FINAL_REACHED), PR.TimeStringFromTimeStamp(parameter))
+    elseif action==PR.ACTION.PLEDGE_FINAL_REACHED_VET then
+        zoneName = zoneName .. " (Veteran)"
+        msg = zo_strformat("|cD2B568<<1>> <<2>>|r", GetString(PLEDGERUNNER_PLEDGE_FINAL_REACHED_VET), PR.TimeStringFromTimeStamp(parameter))
     elseif action==PR.ACTION.PLEDGE_ZONE_LEFT then
         msg = zo_strformat("|cD26868<<1>> <<2>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_LEFT), PR.TimeStringFromTimeStamp(parameter))
+    elseif action==PR.ACTION.BOSS_KILLED then
+        local bossMaxZone = PR.ZONEDATA[zoneId]["numBosses"] or 6
+        msg = zo_strformat("|cD26868<<1>> <<2>>|r", zo_strformat("<<1>> (<<2>>/<<3>>)", GetString(PLEDGERUNNER_BOSS_KILL), parameter, bossMaxZone))
     end
     local fake_uuid = zo_strformat("<<1>><<2>><<3>><<4>>", zoneId,playerName,action,msg)
     return {time=PR.GetDateAndTimeString(), zone=zoneName, message=msg, name=playerName, action=action, categoryId=zoneId, fake_uuid=fake_uuid}

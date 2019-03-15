@@ -27,6 +27,7 @@ How the communication works:
 Addons are not allowed to send chat messages to other players. So the addon is using a little workaround by putting its messages into the player's guild note. This, however, in turn means that the player needs permission to read/write their guild notes. Some guilds don't allow this, so unfortunately, the addon will not work then. Sorry.
 
 Planned:
-- keeping a record of killed bosses, so dungeons can be run without pledges
-- (potentially fixed already)fixing an issue where the dungeon timer will reset because the dungeon is split into multiple zones
-- ...
+- (started) keeping a record of killed bosses, so dungeons can be run without pledges
+- (potentially fixed already) fixing an issue where the dungeon timer will reset because the dungeon is split into multiple zones
+- timer sometimes (often) misbehaves during unexpected zone changes
+- Zone Data is incomplete in terms of boss numbers - these differ quite a bit. Falkreath has 5, City of Ash II has 11!

@@ -1,7 +1,7 @@
 ## Title: PledgeRunner
 ## AddOnVersion: 1
 ## APIVersion: 100026
-## Version: 1.0.1
+## Version: 1.0.3
 ## Author: flipswitchingmonkey
 ## SavedVariables: PledgeRunnerSavedVariables
 

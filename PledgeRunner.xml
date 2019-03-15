@@ -116,7 +116,7 @@
 
                 <!-- FOOTER SECTION -->
                 <Label name="$(parent)TimerLabel" text="Timer:" font="ZoFontWinH5" resizeToFitDescendents="false">
-                    <Dimensions x="70" y="20" />
+                    <Dimensions x="60" y="20" />
                     <Anchor point="BOTTOMLEFT" relativeTo="$(parent)" relativePoint="BOTTOMLEFT" offsetX="5" offsetY="-5" />
                 </Label>
 
@@ -130,15 +130,25 @@
                     <Anchor point="BOTTOMLEFT" relativeTo="$(parent)TimerTime" relativePoint="BOTTOMRIGHT" offsetX="5" offsetY="0" />
                 </Label>
 
-                <Label name="$(parent)CurrentZone" text="" font="ZoFontWinH5">
+                <Label name="$(parent)CurrentZone" text="" font="ZoFontWinH5" wrapMode="ELLIPSIS">
                     <Dimensions x="200" y="20" />
                     <Anchor point="BOTTOMLEFT" relativeTo="$(parent)CurrentZoneLabel" relativePoint="BOTTOMRIGHT" offsetX="5" offsetY="0" />
                 </Label>
 
-                <Button name="$(parent)ResetButton" text="Clear" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
+                <Label name="$(parent)BossCompletionLabel" text="Bosses:" font="ZoFontWinH5">
+                    <Dimensions x="60" y="20" />
+                    <Anchor point="BOTTOMLEFT" relativeTo="$(parent)CurrentZone" relativePoint="BOTTOMRIGHT" offsetX="5" offsetY="0" />
+                </Label>
+
+                <Label name="$(parent)BossCompletion" text="0/0" font="ZoFontWinH5">
+                    <Dimensions x="30" y="20" />
+                    <Anchor point="BOTTOMLEFT" relativeTo="$(parent)BossCompletionLabel" relativePoint="BOTTOMRIGHT" offsetX="5" offsetY="0" />
+                </Label>
+
+                <!-- <Button name="$(parent)ResetButton" text="Clear" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
                     <Dimensions x="150" y="30" />
                     <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="-10" offsetY="0" />
-                </Button>
+                </Button> -->
 
                 <!-- <Button name="$(parent)TestButton" text="Test" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
                     <Dimensions x="150" y="30" />
@@ -180,7 +190,7 @@
                 </Label>
                 <Button name="$(parent)DeleteRow" inherits="ZO_ButtonBehaviorClickSound">
 					<Dimensions x="20" y="20" />
-					<Anchor point="TOPLEFT" relativeTo="$(parent)Message" relativePoint="TOPRIGHT" offsetX="5" offsetY="5"/>
+					<Anchor point="TOPLEFT" relativeTo="$(parent)Message" relativePoint="TOPRIGHT" offsetX="5" offsetY="2"/>
                     <OnClicked>
                             PledgeRunner.RemoveListEntry(self, button)
                     </OnClicked>
