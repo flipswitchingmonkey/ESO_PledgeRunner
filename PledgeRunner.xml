@@ -145,10 +145,10 @@
                     <Anchor point="BOTTOMLEFT" relativeTo="$(parent)BossCompletionLabel" relativePoint="BOTTOMRIGHT" offsetX="5" offsetY="0" />
                 </Label>
 
-                <!-- <Button name="$(parent)ResetButton" text="Clear" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
+                <Button name="$(parent)ResetButton" text="Clear" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
                     <Dimensions x="150" y="30" />
                     <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="-10" offsetY="0" />
-                </Button> -->
+                </Button>
 
                 <!-- <Button name="$(parent)TestButton" text="Test" font="ZoFontGame" hidden="false" inherits="ZO_DefaultButton">
                     <Dimensions x="150" y="30" />

@@ -174,8 +174,8 @@ function PR:InitWindow()
     end)
     -- set button handlers
     -- PledgeRunnerDialogTestButton:SetHandler("OnClicked", self.TestButton_Clicked)
-    -- PledgeRunnerDialogResetButton:SetHandler("OnClicked", self.ResetButton_Clicked)
-    -- PledgeRunnerDialogResetButton:SetText(GetString(PLEDGERUNNER_BUTTON_CLEAR))
+    PledgeRunnerDialogResetButton:SetHandler("OnClicked", self.ResetButton_Clicked)
+    PledgeRunnerDialogResetButton:SetText(GetString(PLEDGERUNNER_BUTTON_CLEAR))
     PledgeRunnerDialogButtonCloseAddon:SetHandler("OnClicked", self.ToggleMainWindow)
     PledgeRunnerDialogTimerLabel:SetText(GetString(PLEDGERUNNER_TIMER)..":")
     PledgeRunnerDialogBossCompletionLabel:SetText(GetString(PLEDGERUNNER_BOSSES)..":")
@@ -569,9 +569,14 @@ function PR.OnPlayerActivated(event)
     end
     -- CHECK OLD ZONE DATA
     -- before checking for the _new_ zone data, see if we left a zone that had zone data, so we can log that
-    if PR.currentZoneData ~= nil then
-        PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_LEFT, PR.GetTimeElapsed()))
-    end
+    -- if PR.currentZoneData ~= nil then
+    --     if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+    --         PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_LEFT, PR.GetTimeElapsed()))
+    --     else
+    --         PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_ZONE_LEFT_VET, PR.GetTimeElapsed()))
+    --     end
+    -- end
+    
     -- RENEW ZONE DATA
     -- now renew the currentZoneData with the current zone - if it's not in our PledgeData, it's going to be nil
     PR.currentZoneData = PR.ZONEDATA[zoneId]
@@ -683,15 +688,22 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
   function PR.AddRow(dataString, playerName)
     local data = PR.DecodeDataString(dataString, playerName)
     if data == nil then return end
+    -- for now, skip zone left msg entirely
+    if data.action == PR.ACTION.PLEDGE_ZONE_LEFT then return end
     local doInsert = true
     for k, v in pairs(PR.dataItems[PR.savedVariables.selectedGuildId]) do
         if v.name == data.name and v.zone == data.zone and v.message == data.message then 
             v.time = data.time
             doInsert = false
         elseif v.name == data.name and v.zone == data.zone then
-            if v.action == PR.ACTION.PLEDGE_FINAL_REACHED then
-                doInsert = true 
-            elseif v.action == PR.ACTION.PLEDGE_ZONE_ENTERED or v.action == PR.ACTION.PLEDGE_ZONE_STARTED or v.action == PR.ACTION.BOSS_KILLED then
+            -- if  or  then
+                -- doInsert = true 
+            if v.action == PR.ACTION.PLEDGE_FINAL_REACHED or v.action == PR.ACTION.PLEDGE_ZONE_ENTERED or v.action == PR.ACTION.PLEDGE_ZONE_STARTED or v.action == PR.ACTION.BOSS_KILLED then
+                v.time = data.time
+                v.message = data.message
+                v.action = data.action
+                doInsert = false
+            elseif v.action == PR.ACTION.PLEDGERUNNER_PLEDGE_FINAL_REACHED_VET or v.action == PR.ACTION.PLEDGE_ZONE_ENTERED_VET or v.action == PR.ACTION.PLEDGE_ZONE_STARTED_VET then
                 v.time = data.time
                 v.message = data.message
                 v.action = data.action
@@ -752,7 +764,7 @@ function PR.DecodeDataString(dataString, playerName)
         zoneName = zoneName .. " (Veteran)"
         msg = zo_strformat("|cD2B568<<1>> <<2>>|r", GetString(PLEDGERUNNER_PLEDGE_FINAL_REACHED_VET), PR.TimeStringFromTimeStamp(parameter))
     elseif action==PR.ACTION.PLEDGE_ZONE_LEFT then
-        msg = zo_strformat("|cD26868<<1>> <<2>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_LEFT), PR.TimeStringFromTimeStamp(parameter))
+        msg = zo_strformat("|cD26868<<1>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_LEFT), PR.TimeStringFromTimeStamp(parameter))
     elseif action==PR.ACTION.BOSS_KILLED then
         local bossMaxZone = PR.ZONEDATA[zoneId]["numBosses"] or 6
         msg = zo_strformat("|cD26868<<1>> <<2>>|r", zo_strformat("<<1>> (<<2>>/<<3>>)", GetString(PLEDGERUNNER_BOSS_KILL), parameter, bossMaxZone))
