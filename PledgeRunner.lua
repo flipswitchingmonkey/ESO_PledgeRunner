@@ -18,6 +18,7 @@ PR.defaults = {
     width = 700,
     height = 500,
     hidden = false,
+    showInChat = false,
     guildEnabled = {false,false,false,false,false},
 }
 PR.scrollList = nil
@@ -71,6 +72,7 @@ function PR:Initialize()
     
     self.savedVariables = ZO_SavedVars:NewAccountWide("PledgeRunnerSavedVariables", 1, nil, self.defaults)
     PledgeRunnerDialog:SetHidden(PR.savedVariables.hidden)
+    PR.ClearDataItems()
 
     -- Create the scrollList
     PR:CreateScrollList()
@@ -78,6 +80,7 @@ function PR:Initialize()
     if GetDisplayName() == "@flipswitchingmonkey" then
       SLASH_COMMANDS["/rr"] = function(cmd) ReloadUI() end
       PR.debug = true
+      PR.savedVariables.history = PR.savedVariables.history or {}
     end 
     SLASH_COMMANDS["/pledgerunner"] = function(cmd) PR.ShowUI() end
 
@@ -101,29 +104,32 @@ function PR.OnUnitDeatStateChanged(event, unitTag, isDead)
         bossName = GetUnitName(unitTag)
         PR.AddBossKill(bossName)
         if PR.debug==true then d("DEAD:"..bossName) end
+        if GetDisplayName() == "@flipswitchingmonkey" then
+            table.insert(PR.savedVariables.history, {name=bossName, counter=#PR.killed_boss_list, zone=PR.currentZoneData["zone"], dungeon=PR.currentZoneData["en"]["zone"] })
+        end 
     end
 end
 
-function PR.OnExperienceGain(event, reason, level, previousExperience, currentExperience, championPoints)
-    if PR.debug==true then d("XP " .. reason .. " " .. currentExperience) end
+-- function PR.OnExperienceGain(event, reason, level, previousExperience, currentExperience, championPoints)
+    -- if PR.debug==true then d("XP " .. reason .. " " .. currentExperience) end
     -- if reason==PROGRESS_REASON_ACHIEVEMENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ACHIEVEMENT") end end
     -- if reason==PROGRESS_REASON_ACTION then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ACTION") end end
     -- if reason==PROGRESS_REASON_ALLIANCE_POINTS then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_ALLIANCE_POINTS") end end
     -- if reason==PROGRESS_REASON_AVA then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_AVA") end end
     -- if reason==PROGRESS_REASON_BATTLEGROUND then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BATTLEGROUND") end end
     -- if reason==PROGRESS_REASON_BOOK_COLLECTION_COMPLETE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BOOK_COLLECTION_COMPLETE") end end
-    if reason==PROGRESS_REASON_BOSS_KILL then
-        if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BOSS_KILL") end
+    -- if reason==PROGRESS_REASON_BOSS_KILL then
+        -- if PR.debug==true then d("XP Reason: * PROGRESS_REASON_BOSS_KILL") end
         -- local numBossesKilled = PR.CheckBossesAlive()
         -- if numBossesKilled > 0 then PR.AddBossKill() end
-    end
+    -- end
     -- if reason==PROGRESS_REASON_COLLECT_BOOK then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COLLECT_BOOK") end end
     -- if reason==PROGRESS_REASON_COMMAND then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COMMAND") end end
     -- if reason==PROGRESS_REASON_COMPLETE_POI then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_COMPLETE_POI") end end
     -- if reason==PROGRESS_REASON_DARK_ANCHOR_CLOSED then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DARK_ANCHOR_CLOSED") end end
     -- if reason==PROGRESS_REASON_DARK_FISSURE_CLOSED then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DARK_FISSURE_CLOSED") end end
     -- if reason==PROGRESS_REASON_DISCOVER_POI then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DISCOVER_POI") end end
-    if reason==PROGRESS_REASON_DUNGEON_CHALLENGE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DUNGEON_CHALLENGE") end end
+    -- if reason==PROGRESS_REASON_DUNGEON_CHALLENGE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_DUNGEON_CHALLENGE") end end
     -- if reason==PROGRESS_REASON_EVENT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_EVENT") end end
     -- if reason==PROGRESS_REASON_FINESSE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_FINESSE") end end
     -- if reason==PROGRESS_REASON_GRANT_REPUTATION then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_GRANT_REPUTATION") end end
@@ -149,7 +155,7 @@ function PR.OnExperienceGain(event, reason, level, previousExperience, currentEx
     -- if reason==PROGRESS_REASON_TRADESKILL_QUEST then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_QUEST") end end
     -- if reason==PROGRESS_REASON_TRADESKILL_RECIPE then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_RECIPE") end end
     -- if reason==PROGRESS_REASON_TRADESKILL_TRAIT then if PR.debug==true then d("XP Reason: * PROGRESS_REASON_TRADESKILL_TRAIT") end end
-  end
+--   end
 
 
 function PR:InitWindow()
@@ -215,7 +221,9 @@ function PR:InitWindow()
     PR:OnFilterQuestSelected(self.filterQuestComboEntries[1])
     self.questFilterComboBox:SetSelectedItemText(self.filterQuestComboEntries[1].name)
     ZO_CheckButton_SetToggleFunction(PledgeRunnerDialogEnableGuildCheck, self.EnableGuildCheck_OnToggle)
-  
+    PledgeRunnerDialogShowInChat:SetText(GetString(PLEDGERUNNER_SHOW_IN_CHAT))
+    ZO_CheckButton_SetToggleFunction(PledgeRunnerDialogShowInChat, self.ShowInChatCheck_OnToggle)
+    ZO_CheckButton_SetCheckState(PledgeRunnerDialogShowInChat, PR.savedVariables["showInChat"] or false)
     self:RestorePosition()
 end
 
@@ -457,6 +465,10 @@ end
 
 function PR.EnableGuildCheck_OnToggle(checkButton, isChecked)
     PR.savedVariables["guildEnabled"][PR.savedVariables.selectedGuildId] = isChecked
+end
+
+function PR.ShowInChatCheck_OnToggle(checkButton, isChecked)
+    PR.savedVariables["showInChat"] = isChecked
 end
   
 function PR.ToggleMainWindow()
@@ -716,7 +728,9 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
     PR:ApplyFilterQuest()
     if PR.savedVariables["guildEnabled"][PR.savedVariables.selectedGuildId] == true then
       local s = zo_strformat("PledgeRunner: <<1>> - <<2>> - <<3>> - <<4>>", data.time, data.name, data.zone, data.message)
-      CHAT_SYSTEM:AddMessage(s)
+      if PR.savedVariables["showInChat"] == true then
+        CHAT_SYSTEM:AddMessage(s)
+      end
     end
 end
   

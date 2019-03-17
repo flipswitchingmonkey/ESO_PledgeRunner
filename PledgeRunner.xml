@@ -47,6 +47,15 @@
                     <Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="CENTER" offsetX="-5" />
                     <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="5" offsetY="50" />
                 </Control>
+
+                <Button name="$(parent)ShowInChat" hidden="false" inherits="ZO_CheckButton" text="only" verticalAlignment="CENTER" horizontalAlignment="CENTER">
+                    <Dimensions x="20" y="20" />
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)FilterQuest" relativePoint="TOPRIGHT" offsetX="10" offsetY="4" />
+                </Button>
+                <Label name="$(parent)ShowInChatLabel" text="Show messages in chat" hidden="false" mouseEnabled="true" font="ZoFontWinH5" color="ffffff" inheritAlpha="true" verticalAlignment="CENTER" horizontalAlignment="LEFT" resizeToFitDescendents="true">
+                    <Dimensions x="60" y="20" />
+                    <Anchor point="TOPLEFT" relativeTo="$(parent)ShowInChat" relativePoint="TOPRIGHT" offsetX="5" offsetY="0" />
+                </Label>
 <!-- 
                 <EditBox name="$(parent)FilterText" font="ZoFontChat" horizontalAlignment="LEFT" verticalAlignment="CENTER" text="" editEnabled="true" multiLine="false" newLineEnabled="false" inherits="ZO_DefaultEditForBackdrop">
 					<Dimensions y="25"/>

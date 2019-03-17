@@ -200,10 +200,18 @@ PR.ZONEDATA = {
     [146] = {
         zone = 146,
         pledge = 5278,
+        numBosses = 5,
         en = {
             zone = "Wayrest Sewers I",
             pledge = "Pledge: Wayrest Sewers I",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                        "Slimecraw",
+                        "Investigator Garron",
+                        "The Rat Whisperer",
+                        "Uulgarg the Hungry",
+                        "Varaine Pellingare",
+            },
         },
         de = {
             zone = "Kanalisation von Wegesruh I",
