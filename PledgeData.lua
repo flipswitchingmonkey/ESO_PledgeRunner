@@ -11,6 +11,13 @@ PR.ZONEDATA = {
             zone = "The Banished Cells I",
             pledge = "Pledge: Banished Cells I",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                "Cell Haunter",
+                "Shadowrend",
+                "Angata the Clannfear Handler",
+                "Skeletal Destroyer",
+                "High Kinlord Rilis",
+            },
         },
         de = {
             zone = "Verbannungszellen I",
@@ -65,10 +72,18 @@ PR.ZONEDATA = {
     [934] = { 
         zone = 934,
         pledge = 5248,
+        numBosses = 5,
         en = {
             zone = "Fungal Grotto II",
             pledge = "Pledge: Fungal Grotto II",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                "Mephala's Fang",
+                "Gamyne Bandu",
+                "Ciirenas the Shepherd",
+                "Spawn of Mephala",
+                "Reggr Dark-Dawn",
+            },
         },
         de = {
             zone = "Pilzgrotte II",
@@ -84,6 +99,7 @@ PR.ZONEDATA = {
     [144] = { 
         zone = 144,
         pledge = 5260,
+        numBosses = 8,
         en = {
             zone = "Spindleclutch I",
             pledge = "Pledge: Spindleclutch I",
@@ -103,10 +119,21 @@ PR.ZONEDATA = {
     [936] = {
         zone = 936,
         pledge = 5273,
+        numBosses = 8,
         en = {
             zone = "Spindleclutch II",
             pledge = "Pledge: Spindleclutch II",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                "Mad Mortine",
+                "Blood Spawn",
+                "Praxin Douare",
+                "Flesh Atronach",
+                "Flesh Atronach",
+                "Flesh Atronach",
+                "Urvan Veleth",
+                "Vorenor Winterbourne",
+                },
         },
         de = {
             zone = "Spindeltiefen II",
@@ -266,10 +293,19 @@ PR.ZONEDATA = {
     [932] = {
         zone = 932,
         pledge = 5283,
+        numBosses = 6,
         en = {
             zone = "Crypt of Hearts II",
             pledge = "Pledge: Crypt of Hearts II",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                "Ibelgast",
+                "Ruzozuzalpamaz",
+                "Ilambris-Athor",
+                "Ilambris-Zaven",
+                "Ilambris Amalgam",
+                "Mezeluth",
+            },
         },
         de = {
             zone = "Krypta der Herzen II",
@@ -304,6 +340,7 @@ PR.ZONEDATA = {
     [176] = {
         zone = 176,
         pledge = 5290,
+        numBosses = 6,
         en = {
             zone = "City of Ash I",
             pledge = "Pledge: City of Ash I",
@@ -323,10 +360,18 @@ PR.ZONEDATA = {
     [449] = {
         zone = 449,
         pledge = 5291,
+        numBosses = 5,
         en = {
             zone = "Direfrost Keep I",
             pledge = "Pledge: Direfrost Keep I",
             final = "Return to Glirion the Redbeard",
+            bosses = {
+                "Teethnasher the Frostbound",
+                "Guardian of the Flame",
+                "Drodda's Dreadlord",
+                "Iceheart",
+                "Drodda of Icereach",
+            },
         },
         de = {
             zone = "Burg Grauenfrost I",
@@ -438,10 +483,21 @@ PR.ZONEDATA = {
     [11] = {
         zone = 11,
         pledge = 5309,
+        numBosses = 8,
         en = {
             zone = "Vaults of Madness",
             pledge = "Pledge: Vaults of Madness",
             final = "Return to Glirion the Redbeard",
+            bosses = {
+                "The Cursed One",
+                "Ulguna Soul-Reaver",
+                "Death's Head",
+                "Grothdarr",
+                "Achaeraizur",
+                "The Ancient One",
+                "Iskra the Omen",
+                "Mad Architect"
+            },
         },
         de = {
             zone = "Kammern des Wahnsinns",
@@ -651,15 +707,30 @@ PR.ZONEDATA = {
     [1081] = {
         zone = 1081,
         pledge = 6252,
+        numBosses = 5,
         en = {
             zone = "Depths of Malatar",
             pledge = "Pledge: Depths of Malatar",
             final = "Return to Urgarlag Chief-bane",
+            bosses = {
+                "The Scavenging Maw",
+                "The Weeping Woman",
+                "Dark Orb",
+                "King Narilmor",
+                "Symphony of Blades",
+                },
         },
         de = {
             zone = "Tiefen von Malatar",
             pledge = "Gelöbnis: Tiefen von Malatar",
             final = "Kehrt zu Urgarlag Häuptlingsfluch zurück",
+            bosses = {
+                "Der Raubschlund",
+                "Die Trauernde",
+                "Dunkle Sphäre",
+                "König Narilmor",
+                "Die Sinfonie der Klingen",
+                },
         },
         fr = {
             zone = "Les Profondeurs de Malatar",

@@ -44,6 +44,7 @@ PR.ACTION = {
     PLEDGE_FINAL_REACHED_VET = 7,
     PLEDGE_ZONE_LEFT_VET = 8,
     BOSS_KILLED = 9,
+    BOSS_KILLED_VET = 10,
 }
 
 function PR.ClearDataItems(guildId)
@@ -319,12 +320,30 @@ function PR.SetupDataRow(rowControl, data, scrollList)
 end
 
 function PR.KilledBossListAsString()
+    if PR.currentZoneData == nil then return "no data" end
     local s = GetString(PLEDGERUNNER_BOSSES_KILLED) .. "\n"
-    for key, boss in ipairs(PR.killed_boss_list) do
-        if boss ~= nil and #boss > 0 then
-            s = s .. "- " .. boss .. "\n"
+    if PR.currentZoneData[PR.locale]["bosses"] ~= nil then
+        for key, boss in ipairs(PR.currentZoneData[PR.locale]["bosses"]) do
+            local found = false
+            for key2, boss2 in ipairs(PR.killed_boss_list) do
+                if boss == boss2 then
+                    s = s .. "- |c96C05F" .. boss .. "|r\n"
+                    found = true
+                end
+            end
+            if found == false then
+                s = s .. "- |cD26868" .. boss .. "|r\n"
+            end
+        end
+    else
+        for key, boss in ipairs(PR.killed_boss_list) do
+            if boss ~= nil and #boss > 0 then
+                s = s .. "- " .. boss .. "\n"
+            end
         end
     end
+    local bossMaxZone = PR.currentZoneData["numBosses"] or 6
+    s = s .. zo_strformat("<<1>>/<<2>>", #PR.killed_boss_list, bossMaxZone)
     return s
 end
 
@@ -625,7 +644,11 @@ function PR.AddBossKill(bossName)
         local bossMaxZone = PR.currentZoneData["numBosses"] or 6
         table.insert(PR.killed_boss_list, bossName)
         PledgeRunnerDialogBossCompletion:SetText(zo_strformat("<<1>>/<<2>>", #PR.killed_boss_list, bossMaxZone))
-        PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.BOSS_KILLED, #PR.killed_boss_list))
+        if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
+            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.BOSS_KILLED_VET, #PR.killed_boss_list))
+        else
+            PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.BOSS_KILLED, #PR.killed_boss_list))
+        end
         if #PR.killed_boss_list == bossMaxZone then
             if GetCurrentZoneDungeonDifficulty() == DUNGEON_DIFFICULTY_VETERAN then
                 PR.InjectAddonDataIntoGuildNote(PR.EncodeDataStringWithId(PR.currentZoneData["zone"], PR.ACTION.PLEDGE_FINAL_REACHED_VET, PR.GetTimeElapsed()))
@@ -715,7 +738,7 @@ function PR.GuildMemberNoteChanged(event, guildId, displayName, note)
                 v.message = data.message
                 v.action = data.action
                 doInsert = false
-            elseif v.action == PR.ACTION.PLEDGERUNNER_PLEDGE_FINAL_REACHED_VET or v.action == PR.ACTION.PLEDGE_ZONE_ENTERED_VET or v.action == PR.ACTION.PLEDGE_ZONE_STARTED_VET then
+            elseif v.action == PR.ACTION.PLEDGERUNNER_PLEDGE_FINAL_REACHED_VET or v.action == PR.ACTION.PLEDGE_ZONE_ENTERED_VET or v.action == PR.ACTION.PLEDGE_ZONE_STARTED_VET or v.action == PR.ACTION.BOSS_KILLED_VET then
                 v.time = data.time
                 v.message = data.message
                 v.action = data.action
@@ -780,6 +803,10 @@ function PR.DecodeDataString(dataString, playerName)
     elseif action==PR.ACTION.PLEDGE_ZONE_LEFT then
         msg = zo_strformat("|cD26868<<1>>|r", GetString(PLEDGERUNNER_PLEDGE_ZONE_LEFT), PR.TimeStringFromTimeStamp(parameter))
     elseif action==PR.ACTION.BOSS_KILLED then
+        local bossMaxZone = PR.ZONEDATA[zoneId]["numBosses"] or 6
+        msg = zo_strformat("|cD26868<<1>> <<2>>|r", zo_strformat("<<1>> (<<2>>/<<3>>)", GetString(PLEDGERUNNER_BOSS_KILL), parameter, bossMaxZone))
+    elseif action==PR.ACTION.BOSS_KILLED_VET then
+        zoneName = zoneName .. " (Veteran)"
         local bossMaxZone = PR.ZONEDATA[zoneId]["numBosses"] or 6
         msg = zo_strformat("|cD26868<<1>> <<2>>|r", zo_strformat("<<1>> (<<2>>/<<3>>)", GetString(PLEDGERUNNER_BOSS_KILL), parameter, bossMaxZone))
     end
