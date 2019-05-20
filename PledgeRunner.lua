@@ -177,7 +177,9 @@ function PR:InitWindow()
         PledgeRunnerDialogHeadersZone:SetDimensions(self.columnWidthUnit * self.columnUnits[3], 25)
         PledgeRunnerDialogHeadersMessage:SetDimensions(self.columnWidthUnit * self.columnUnits[4], 25)
         PledgeRunnerDialogHeadersDeleteRow:SetDimensions(20, 20)
-        self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
+        if self.dataItems[self.savedVariables.selectedGuildId] ~= nil then
+            self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
+        end
     end)
     -- set button handlers
     -- PledgeRunnerDialogTestButton:SetHandler("OnClicked", self.TestButton_Clicked)
@@ -205,11 +207,11 @@ function PR:InitWindow()
         ZO_Tooltips_HideTextTooltip()
     end)
 
-    self.OnGuildSelectedCallback = function(_, _, entry)
-        self:OnGuildSelected()
+    self.OnGuildSelectedCallback = function(a, b, entry, c)
+        self:OnGuildSelected(entry)
     end
     self.OnFilterQuestSelectedCallback = function(_, _, entry)
-        self:OnFilterQuestSelected()
+        self:OnFilterQuestSelected(entry)
     end
   
     self.questFilterComboBox = PR:GetFilterQuestComboBox()
@@ -257,7 +259,9 @@ function PR:CreateScrollList()
     self.scrollList:SetAnchor(BOTTOMRIGHT, PledgeRunnerDialog, BOTTOMRIGHT, -10, -40)
 
     -- Call Update to add the data items to the scrollList
-    self.scrollList:Update(PR.dataItems[1])
+    if PR.dataItems[1] ~= nil then
+        self.scrollList:Update(PR.dataItems[1])
+    end
 end
 
 function PR.SetupDataRow(rowControl, data, scrollList)
@@ -511,10 +515,11 @@ function PR.HideUI()
 end
   
 function PR:OnGuildSelected(entry)
-    -- if PR.debug==true then d(entry.guildId, entry.guildText)
     ZO_CheckButton_SetCheckState(PledgeRunnerDialogEnableGuildCheck, self.savedVariables["guildEnabled"][entry.guildId])
     self.savedVariables.selectedGuildId = entry.guildId
-    self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
+    if self.dataItems[self.savedVariables.selectedGuildId] ~= nil then
+        self.scrollList:Update(self.dataItems[self.savedVariables.selectedGuildId])
+    end
     PR:ApplyFilterQuest()
     self.guildComboBox:SetSelectedItemText(entry.guildText)
     if(self.selectedCallback) then

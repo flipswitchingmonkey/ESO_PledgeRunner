@@ -33,10 +33,20 @@ PR.ZONEDATA = {
     [935] = { 
         zone = 935,
         pledge = 5246,
+        numBosses = 7,
         en = {
             zone = "The Banished Cells II",
             pledge = "Pledge: Banished Cells II",
             final = "Return to Maj al-Ragath",
+            bosses = {
+                "Keeper Areldur",
+                "Maw of the Infernal",
+                "Keeper Voranil",
+                "Keeper Imiril",
+                "Sister Sihna",
+                "Sister Vera",
+                "High Kinlord Rilis",
+            },
         },
         de = {
             zone = "Verbannungszellen II",
@@ -52,7 +62,7 @@ PR.ZONEDATA = {
     [283] = {
         zone = 283,
         pledge = 5247,
-        bosscount = 5,
+        numBosses = 5,
         en = {
             zone = "Fungal Grotto I",
             final = "Return to Maj al-Ragath",
@@ -173,6 +183,7 @@ PR.ZONEDATA = {
             zone = "Darkshade II",
             pledge = "Pledge: Darkshade II",
             final = "Return to Maj al-Ragath",
+            
         },
         de = {
             zone = "Dunkelschattenkavernen II",
@@ -387,10 +398,19 @@ PR.ZONEDATA = {
     [131] = {
         zone = 131,
         pledge = 5301,
+        numBosses = 6,
         en = {
             zone = "Tempest Island",
             pledge = "Pledge: Tempest Island",
             final = "Return to Glirion the Redbeard",
+            bosses = {
+                "Sonolia the Matriarch",
+                "Valaran Stormcaller",
+                "Yalorasse the Speaker",
+                "Stormfist",
+                "Commodore Ohmanil",
+                "Stormreeve Neidir",
+            },
         },
         de = {
             zone = "Orkaninsel",
@@ -518,6 +538,19 @@ PR.ZONEDATA = {
             zone = "City of Ash II",
             pledge = "Pledge: City of Ash II",
             final = "Return to Glirion the Redbeard",
+            bosses = {
+                "Akezel",
+                "Marruz",
+                "Rukhan",
+                "Urata the Legion",
+                "Urata the Legion",
+                "Urata the Legion",
+                "Horvantud the Fire Maw",
+                "Ash Titan",
+                "Xivilai Boltaic",
+                "Xivilai Fulminator",
+                "Valkyn Skoria",
+            },
         },
         de = {
             zone = "Stadt der Asche II",
@@ -590,10 +623,17 @@ PR.ZONEDATA = {
     [848] = {
         zone = 848,
         pledge = 5780,
+        numBosses = 4,
         en = {
             zone = "Cradle of Shadows",
             pledge = "Pledge: Cradle of Shadows",
             final = "Return to Urgarlag Chief-bane",
+            bosses = {
+                "Khephidaen",
+                "Votary of Velidreth",
+                "Dranos Velador",
+                "Velidreth",
+            },
         },
         de = {
             zone = "Wiege der Schatten",
